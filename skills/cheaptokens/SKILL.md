@@ -207,16 +207,16 @@ audio, music, transcription, or embedding tasks.
 
 Optional deeper references, if available or if a rare edge case appears:
 
-- `https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-models/SKILL.md`
-- `https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-chat/SKILL.md`
-- `https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-image-generate/SKILL.md`
-- `https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-image-edit/SKILL.md`
-- `https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-audio-speech/SKILL.md`
-- `https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-audio-music/SKILL.md`
-- `https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-audio-transcription/SKILL.md`
-- `https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-video/SKILL.md`
-- `https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-embeddings/SKILL.md`
-- `https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-errors/SKILL.md`
+- `https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/venice-models/SKILL.md`
+- `https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/venice-chat/SKILL.md`
+- `https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/venice-image-generate/SKILL.md`
+- `https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/venice-image-edit/SKILL.md`
+- `https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/venice-audio-speech/SKILL.md`
+- `https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/venice-audio-music/SKILL.md`
+- `https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/venice-audio-transcription/SKILL.md`
+- `https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/venice-video/SKILL.md`
+- `https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/venice-embeddings/SKILL.md`
+- `https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/venice-errors/SKILL.md`
 
 That's a one-time HTTP read, not an install.
 
