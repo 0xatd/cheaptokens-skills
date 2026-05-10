@@ -83,6 +83,37 @@ Example success body:
 
 ---
 
+## Safe key handling
+
+The fastest workflow is pasting a CheapTokens key into a trusted local
+agent. That is acceptable when speed matters, but treat the key as a
+bearer credential: anyone who sees it can spend the remaining credits
+until it expires. CheapTokens limits blast radius because keys are
+budget-capped and expire at 23:59:59 UTC on the purchase date, but it
+does not make pasted keys private.
+
+Recommended paths:
+
+1. **Fast path:** paste the key directly into a trusted private agent
+   session.
+2. **Safer path:** store the key in an environment variable or local
+   `.env` file and ask the agent to read it from there.
+3. **Safest path:** store the key in a secret manager or runtime secret
+   store and give the agent the secret name, not the raw key.
+
+Example safer local workflow:
+
+```bash
+export VENICE_API_KEY="VENICE_INFERENCE_KEY_..."
+# Then ask the agent: use CheapTokens with $VENICE_API_KEY for this task
+```
+
+Do not paste keys into public/shared agents, commit keys to repos, or
+include them in screenshots/logs. If a key is exposed, use wallet
+recovery/reissue to rotate it.
+
+---
+
 ## Step 2 — Discover live capabilities
 
 Before you tell a user what Venice can or can't do, ask Venice.
