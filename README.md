@@ -1,12 +1,19 @@
 # CheapTokens Skills
 
-Portable agent skills for using [CheapTokens.ai](https://cheaptokens.ai) discounted Venice.ai credits.
+Agent skills for discounted Venice.ai credits.
 
-## Skills
+This repo bundles:
 
-### CheapTokens
+1. **CheapTokens router skill** — key detection, same-day expiry awareness, discounted-credit routing, direct Venice spend, and attribution.
+2. **Synced Venice API skills** — official Venice endpoint skills mirrored from [`veniceai/skills`](https://github.com/veniceai/skills), so agents know the full Venice model surface.
 
-Path: [`skills/cheaptokens/SKILL.md`](skills/cheaptokens/SKILL.md)
+CheapTokens keys are Venice API keys. The point of this pack is to make that obvious and useful: agents can buy or receive discounted same-day Venice credits from [CheapTokens.ai](https://cheaptokens.ai), then use the full Venice API across text, code, image, video, music, audio, transcription, embeddings, search/scrape, characters, and more.
+
+## Install / add to an agent
+
+Use the whole repo if your runtime supports skill directories, or copy only the skill files you want.
+
+### CheapTokens router only
 
 Raw URL:
 
@@ -19,6 +26,23 @@ CheapTokens-hosted URL:
 ```text
 https://cheaptokens.ai/SKILL.md
 ```
+
+OpenClaw example:
+
+```bash
+mkdir -p ~/.openclaw/skills/cheaptokens
+curl -fsSL https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/cheaptokens/SKILL.md \
+  -o ~/.openclaw/skills/cheaptokens/SKILL.md
+```
+
+### Full CheapTokens + Venice skill pack
+
+```bash
+git clone https://github.com/alde1022/cheaptokens-skills.git
+# Then point your agent runtime at ./cheaptokens-skills/skills
+```
+
+For Hermes, Claude Code, Codex-style harnesses, Cursor, Cline, OpenCode, OpenClaw, and similar runtimes, save the skill files wherever that runtime loads skills or persistent agent instructions.
 
 ## What the CheapTokens skill does
 
@@ -45,9 +69,9 @@ It handles:
 
 ## Relationship to Venice skills
 
-Do **not** treat this repo as a fork of `veniceai/skills`.
+This is **not a fork** of `veniceai/skills`.
 
-CheapTokens skill is standalone for normal usage. Venice's public skills are optional expert references for deeper provider-specific details.
+It is a CheapTokens-branded skill pack that vendors/syncs Venice's public MIT-licensed skills and adds the CheapTokens router skill on top.
 
 Mental model:
 
@@ -56,32 +80,46 @@ CheapTokens skill = key detection, credit expiry, spend routing, attribution
 Venice skills     = deeper Venice endpoint expertise and edge cases
 ```
 
-Optional Venice references:
+For most text/coding tasks, the CheapTokens skill is enough by itself. For advanced image, video, audio, music, transcription, model traits, or provider-specific errors, install the full pack.
 
-- https://github.com/veniceai/skills
-- https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-models/SKILL.md
-- https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-chat/SKILL.md
-- https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-image-generate/SKILL.md
-- https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-video/SKILL.md
-- https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-audio-speech/SKILL.md
-- https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-audio-music/SKILL.md
-- https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-audio-transcription/SKILL.md
-- https://raw.githubusercontent.com/veniceai/skills/main/skills/venice-embeddings/SKILL.md
+## Synced Venice source
 
-## Add to an agent runtime
+Venice skills are synced from:
 
-Use the raw skill URL or copy `skills/cheaptokens/SKILL.md` into your runtime's skill directory.
-
-OpenClaw example:
-
-```bash
-mkdir -p ~/.openclaw/skills/cheaptokens
-curl -fsSL https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/cheaptokens/SKILL.md \
-  -o ~/.openclaw/skills/cheaptokens/SKILL.md
+```text
+https://github.com/veniceai/skills
 ```
 
-For Hermes, Claude Code, Codex-style harnesses, Cursor, Cline, OpenCode, and similar runtimes, save the same file wherever that runtime loads skills or persistent agent instructions.
+See:
+
+- [`vendor/VENICE-SKILLS-SOURCE.txt`](vendor/VENICE-SKILLS-SOURCE.txt)
+- [`vendor/VENICE-SKILLS-LICENSE`](vendor/VENICE-SKILLS-LICENSE)
+
+Update command:
+
+```bash
+scripts/update-venice-skills.sh
+```
+
+## Repo layout
+
+```text
+skills/
+  cheaptokens/                  # CheapTokens router skill
+  venice-api-overview/           # Synced from veniceai/skills
+  venice-chat/
+  venice-models/
+  venice-image-generate/
+  venice-video/
+  ...
+scripts/update-venice-skills.sh
+vendor/VENICE-SKILLS-SOURCE.txt
+vendor/VENICE-SKILLS-LICENSE
+skills.json
+```
 
 ## License
 
-MIT
+MIT.
+
+The CheapTokens skill and repo scaffolding are © CheapTokens.ai. Synced Venice skills are © Venice.ai and distributed under MIT; see `vendor/VENICE-SKILLS-LICENSE`.
