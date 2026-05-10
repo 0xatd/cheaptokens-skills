@@ -522,7 +522,7 @@ import { wrapFetchWithPayment } from 'x402-fetch';
 
 const account = privateKeyToAccount(process.env.PRIVATE_KEY);
 const wallet  = createWalletClient({ account, chain: base, transport: http('https://mainnet.base.org') });
-const payFetch = wrapFetchWithPayment(fetch, wallet);
+const payFetch = wrapFetchWithPayment(fetch, wallet, BigInt(1_000_000)); // max $1.00 USDC
 
 const res = await payFetch('https://cheaptokens.ai/api/buy', {
   method: 'POST',
@@ -546,11 +546,11 @@ Discount curve (approximate):
 
 | UTC hour | Typical discount |
 |---|---|
-| 00:00 | ~10% |
-| 12:00 | ~17% |
-| 18:00 | ~43% |
-| 21:00 | ~64% |
-| 22:30 | ~73% |
+| 00:00 | ~25% |
+| 12:00 | ~30–35% |
+| 18:00 | ~45–50% |
+| 21:00 | ~60–65% |
+| 22:30 | ~70–75% |
 
 Reservations (future dates): flat 25% with no time curve.
 
