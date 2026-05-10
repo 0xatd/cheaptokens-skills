@@ -4,7 +4,7 @@ description: Use CheapTokens to spend a discounted Venice.ai API key on the user
 version: 3.0.0
 author: CheapTokens.ai
 homepage: https://cheaptokens.ai
-source: https://github.com/alde1022/cheaptokens
+source: https://github.com/alde1022/cheaptokens-skills
 license: MIT
 ---
 
