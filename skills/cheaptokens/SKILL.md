@@ -22,6 +22,17 @@ This skill is **one file**. There is nothing to install. Any agent
 that can read SKILL.md and make HTTPS calls (curl / fetch / OpenAI
 SDK / `web_fetch` / built-in HTTP tool) can use it.
 
+## Why this skill exists
+
+CheapTokens is optimized for short-lived, same-day credits. Manually
+configuring a new API provider every day is friction, especially when
+you buy near midnight UTC for the largest discount and may have less
+than an hour to use the credits. This skill turns a fresh key into
+immediate action: paste the key (or point the agent at a secret/env
+var), ask normally, and the agent discovers Venice capabilities, routes
+the task, spends the key, and attributes what actually ran before the
+credits expire.
+
 ---
 
 ## Honest execution model — read this first
