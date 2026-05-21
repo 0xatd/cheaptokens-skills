@@ -18,7 +18,7 @@ Use the whole repo if your runtime supports skill directories, or copy only the 
 Raw URL:
 
 ```text
-https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/cheaptokens/SKILL.md
+https://raw.githubusercontent.com/0xatd/cheaptokens-skills/main/skills/cheaptokens/SKILL.md
 ```
 
 CheapTokens-hosted URL:
@@ -31,14 +31,14 @@ OpenClaw example:
 
 ```bash
 mkdir -p ~/.openclaw/skills/cheaptokens
-curl -fsSL https://raw.githubusercontent.com/alde1022/cheaptokens-skills/main/skills/cheaptokens/SKILL.md \
+curl -fsSL https://raw.githubusercontent.com/0xatd/cheaptokens-skills/main/skills/cheaptokens/SKILL.md \
   -o ~/.openclaw/skills/cheaptokens/SKILL.md
 ```
 
 ### Full CheapTokens + Venice skill pack
 
 ```bash
-git clone https://github.com/alde1022/cheaptokens-skills.git
+git clone https://github.com/0xatd/cheaptokens-skills.git
 # Then point your agent runtime at ./cheaptokens-skills/skills
 ```
 
