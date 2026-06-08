@@ -1,5 +1,11 @@
 # CheapTokens Skills
 
+## What this is
+
+CheapTokens Skills is the agent skill pack for using CheapTokens/Venice credits. It teaches agents how to route model calls through CheapTokens keys and the Venice API surface.
+
+Status: public support repo for CheapTokens. This is not the CheapTokens app itself; the production product lives in `cheaptokens-audit/` / `0xatd/cheaptokens`.
+
 Agent skills for discounted Venice.ai credits.
 
 This repo bundles:
