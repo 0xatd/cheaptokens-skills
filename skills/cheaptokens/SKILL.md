@@ -1,7 +1,7 @@
 ---
 name: cheaptokens
 description: Use CheapTokens to spend a discounted Venice.ai API key on the user's current task. TRIGGER WHEN any of these are true — (a) the user pastes a Venice-looking API key (long opaque bearer token, sometimes labeled "Venice API key", "CheapTokens key", "discount key", or "CheapTokens credits"); (b) the user says phrasings like "use this key", "use my key", "use CheapTokens", "use cheap tokens", "use the CheapTokens key", "use this Venice key", "run this on CheapTokens", "route this through Venice", "do this with this Venice key", "swap to Venice for this", "use my cheap credits", "use the discounted key"; (c) the user invokes /cheaptokens; or (d) the agent needs cheap, ephemeral, OpenAI-compatible inference for burst workloads, experiments, or budget-capped runs. The skill is a single self-contained file — no install, no helper binary, no external dependency. It detects whether the key is a CheapTokens credit, discovers Venice's live capabilities (text, image, audio, video, embeddings) via /api/v1/models, triages the user's request against that capability map, and spends the key directly via HTTPS calls the agent already knows how to make. Hybrid replies (Venice + host) print one attribution line per provider so the user can verify which provider produced which bytes. Falls back to the host provider transparently on exhaustion, 401, or expiry at 23:59:59 UTC on the purchase date.
-version: 3.0.0
+version: 3.1.0
 author: CheapTokens.ai
 homepage: https://cheaptokens.ai
 source: https://github.com/0xatd/cheaptokens-skills
@@ -78,6 +78,29 @@ Where `<LAST6>` is the last 6 characters of the pasted key.
 If `status !== "active"` or `expiresAt` is in the past, the key is
 dead. Tell the user once and stop. **Do not try to burn a dead
 key.**
+
+Immediately after an active CheapTokens status check, compute:
+
+```js
+const minutesRemaining = Math.floor((Date.parse(expiresAt) - Date.now()) / 60_000);
+```
+
+Then choose the flow before asking the user anything:
+
+| Time remaining | Flow | Required behavior |
+|---|---|---|
+| `< 30m` | **Fast mode** | Skip menus, auto-pick a live model, skip priority mode/config writes, start immediately. |
+| `30m-119m` | **Normal-short** | Ask at most one model-choice question if needed. Skip priority mode/config writes. |
+| `>= 120m` | **Full flow** | Normal discovery and optional priority-mode discussion are allowed. |
+
+Every acknowledgement while a CheapTokens key is active must show a
+countdown, not only an absolute timestamp:
+
+> CheapTokens active: $1.75 issued, **9m left** until 23:59 UTC. Fast mode - using `claude-sonnet-4-6` if live, then starting now.
+
+Priority mode or provider config mutation is only offered when
+`minutesRemaining >= 120`. Below that, it is a time sink and should be
+skipped.
 
 Example success body:
 
@@ -162,6 +185,33 @@ Each row's `model_spec` exposes `capabilities`, `constraints`, and
 `pricing`. Treat that as the source of truth for what the model can
 do and what it costs.
 
+Hard rule for model availability questions: before answering any
+"is model X on Venice?" question, you **must** `GET /api/v1/models`
+with the active key and inspect `data[].id`. Do not answer from memory,
+from this skill's examples, or from training data. If the key has not
+been validated yet, say "checking..." and fetch the list before
+answering.
+
+Venice commonly hosts Anthropic/Claude, GLM, Qwen, DeepSeek, Grok,
+Gemma, Mistral, and other model families, but the live `/models`
+response is always authoritative. Do not tell the user Claude/Opus,
+Sonnet, or any other model family is unavailable without checking
+`/api/v1/models` first.
+
+Suggested text/code routing, filtered against the live model list:
+
+| Task type | First choice | Fallback |
+|---|---|---|
+| Complex reasoning / large refactors | `claude-opus-4-7`, then `claude-opus-4-6` | `zai-org-glm-5-1` |
+| Everyday coding / fast iteration | `claude-sonnet-4-6` | `z-ai-glm-5-turbo` |
+| Cheapest general purpose | `z-ai-glm-5-turbo` | `deepseek-v3.2` or `deepseek-v32` |
+| Code-heavy / large context | `qwen3-coder-480b-a35b-instruct` | `qwen3-coder-480b-a35b-instruct-turbo` |
+| Hardest reasoning | `qwen3-235b-a22b-thinking-2507` | `claude-opus-4-7` |
+
+If a listed model is missing, fall through to the next live choice or
+the relevant `/models/traits` default. Models are added and removed
+frequently.
+
 Text/code selection rule: for coding tasks, first look for `type=code` or
 `type=text` models with `optimizedForCode`; if none are available, pick the
 best text reasoning/default model from traits. Do not tell the user Venice
@@ -212,6 +262,46 @@ non-generative tool output (file reads, lints), and brief glue
 wording ("Here's what Venice produced:"). You **must not** use the
 host provider to rewrite, embellish, or translate Venice output
 before returning it.
+
+### Fast mode for short windows
+
+Use this when `minutesRemaining < 30`.
+
+- Auto-pick a live model. For code, reasoning, refactors, debugging,
+  architecture, or PR text, try `claude-sonnet-4-6`, then
+  `claude-opus-4-6`, then `zai-org-glm-5-1`, then
+  `qwen3-235b-a22b-thinking-2507`. For general writing/text, try
+  `claude-sonnet-4-6`, then `z-ai-glm-5-turbo`.
+- Skip the model menu and priority mode entirely.
+- Acknowledge the countdown and model choice in one line, then start.
+- The user can override mid-task by naming a different model; do not
+  block on that possibility.
+
+If the task is ambiguous under 30 minutes ("improve the app", "make it
+better", "use this for something useful"), do not ask a multi-option
+clarifying question. Pick one concrete, reversible scope and begin:
+
+> CheapTokens active (`claude-sonnet-4-6`, **8m left**). "Improve the app" is broad; defaulting to one small high-leverage UX fix unless you redirect.
+
+### When the task involves code, files, or multi-tool work
+
+The key pays only when you call Venice's `/chat/completions` or another
+Venice endpoint. OpenClaw/Codex/Claude tool calls such as file reads,
+edits, lints, tests, builds, shell commands, and Git commands do not
+spend the key.
+
+For multi-tool tasks, route the reasoning or generation steps through
+Venice:
+
+- Planning: "what should I change to improve X?" -> Venice.
+- Writing new code, content, prompts, specs, or migration text -> Venice.
+- Writing the PR body, review verdict, post-mortem, or summary -> Venice.
+
+Use normal tools to read files, edit files, run builds, and inspect
+results. But before finalizing any non-trivial CheapTokens task output,
+ask: "did I generate this, or did Venice generate it?" If the host
+generated the substantive answer without a Venice call, the key was
+wasted.
 
 ---
 
@@ -492,6 +582,16 @@ If you cannot produce an attribution line for a given reply, **you
 did not use the key for that reply**. Say so plainly. Do not invent
 footers.
 
+Before you finish a CheapTokens task, verify:
+
+- [ ] Did I make at least one `POST /chat/completions` or relevant
+  Venice endpoint call?
+- [ ] If this was a code task, did I route the substantive
+  code-generation or reasoning step through Venice?
+- [ ] Did every active-key acknowledgement include remaining time
+  such as `7m left`?
+- [ ] If `Last used: Never` after the task, I failed.
+
 ---
 
 ## Step 6 — Errors and fallback
@@ -535,6 +635,8 @@ silently.
 - Don't say "switched to Venice" / "using your key now" if you did
   not just complete an HTTPS call to Venice. Use the endpoints or
   admit you can't.
+- Don't answer model-availability questions from memory. Fetch
+  `/api/v1/models` and inspect `data[].id` first.
 - Don't hit `/api/status/{last6}` on every turn — once per key per
   session is plenty.
 - Don't hardcode model IDs, voices, or modality assumptions —
