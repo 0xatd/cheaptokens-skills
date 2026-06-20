@@ -107,6 +107,14 @@ Update command:
 scripts/update-venice-skills.sh
 ```
 
+Validate the local skill pack before publishing a sync:
+
+```bash
+node scripts/validate-skills.mjs
+```
+
+CI runs the same manifest check and verifies the Venice sync script parses as shell.
+
 ## Repo layout
 
 ```text
