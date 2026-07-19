@@ -10,10 +10,10 @@ Agent skills for discounted Venice.ai credits.
 
 This repo bundles:
 
-1. **CheapTokens router skill** — key detection, same-day expiry awareness, discounted-credit routing, direct Venice spend, and attribution.
+1. **CheapTokens router skill** — key detection, Same-Day and Prepaid status handling, discounted-credit routing, direct Venice spend, and attribution.
 2. **Synced Venice API skills** — official Venice endpoint skills mirrored from [`veniceai/skills`](https://github.com/veniceai/skills), so agents know the full Venice model surface.
 
-CheapTokens keys are Venice API keys. The point of this pack is to make that obvious and useful: agents can buy or receive discounted same-day Venice credits from [CheapTokens.ai](https://cheaptokens.ai), then use the full Venice API across text, code, image, video, music, audio, transcription, embeddings, search/scrape, characters, and more.
+CheapTokens keys are Venice API keys. The point of this pack is to make that obvious and useful: agents can buy or receive discounted Same-Day credits or Prepaid API Keys from [CheapTokens.ai](https://cheaptokens.ai), then use the full Venice API across text, code, image, video, music, audio, transcription, embeddings, search/scrape, characters, and more.
 
 ## Install / add to an agent
 
@@ -66,7 +66,7 @@ The CheapTokens skill lets an agent use a CheapTokens/Venice API key across Veni
 It handles:
 
 1. CheapTokens key detection and status checks
-2. same-day expiry awareness
+2. Same-Day expiry awareness and Prepaid balance/runway handling
 3. Venice live model discovery
 4. task-to-endpoint routing
 5. direct Venice API calls using the provided key

@@ -1,7 +1,7 @@
 ---
 name: cheaptokens
-description: Use CheapTokens to spend a discounted Venice.ai API key on the user's current task. TRIGGER WHEN any of these are true — (a) the user pastes a Venice-looking API key (long opaque bearer token, sometimes labeled "Venice API key", "CheapTokens key", "discount key", or "CheapTokens credits"); (b) the user says phrasings like "use this key", "use my key", "use CheapTokens", "use cheap tokens", "use the CheapTokens key", "use this Venice key", "run this on CheapTokens", "route this through Venice", "do this with this Venice key", "swap to Venice for this", "use my cheap credits", "use the discounted key"; (c) the user invokes /cheaptokens; or (d) the agent needs cheap, ephemeral, OpenAI-compatible inference for burst workloads, experiments, or budget-capped runs. The skill is a single self-contained file — no install, no helper binary, no external dependency. It detects whether the key is a CheapTokens credit, discovers Venice's live capabilities (text, image, audio, video, embeddings) via /api/v1/models, triages the user's request against that capability map, and spends the key directly via HTTPS calls the agent already knows how to make. Hybrid replies (Venice + host) print one attribution line per provider so the user can verify which provider produced which bytes. Falls back to the host provider transparently on exhaustion, 401, or expiry at 23:59:59 UTC on the purchase date.
-version: 3.1.0
+description: Use CheapTokens to spend discounted Venice.ai API credits on the user's current task. Trigger when a user pastes a Venice/CheapTokens key, asks to use CheapTokens/cheap credits/Venice for work, invokes /cheaptokens, or needs budget-capped OpenAI-compatible inference. Handles Same-Day expiring keys and Prepaid API Keys, discovers live Venice capabilities, routes text/image/audio/video/embedding tasks through HTTPS calls, and prints provider attribution.
+version: 3.2.0
 author: CheapTokens.ai
 homepage: https://cheaptokens.ai
 source: https://github.com/0xatd/cheaptokens-skills
@@ -10,13 +10,19 @@ license: MIT
 
 # CheapTokens — discounted Venice.ai credits for agents
 
-CheapTokens.ai sells **discounted same-day Venice.ai API credits**
-using a time-decay pricing model (≈25% off at 00:00 UTC, up to ~75%
-off near 23:00 UTC). Pay with **USDC on Base** via the
-[x402](https://www.x402.org/) protocol. You receive a real
-**Venice.ai API key** that works against the OpenAI-compatible
-endpoint `https://api.venice.ai/api/v1`. No signup, no account, no
-browser required.
+CheapTokens.ai sells discounted Venice.ai API credits:
+
+- **Same-Day Credits:** time-decay discounted credits for work today.
+  They expire at 23:59:59 UTC on the purchase date.
+- **Prepaid API Key:** one reusable Venice key with prepaid balance and a
+  selected daily credit reserve. The reserve is debited from prepaid
+  balance each UTC day.
+
+Agents should usually pay with **USDC on Base** via the
+[x402](https://www.x402.org/) protocol. Human buyers can use card
+checkout when available. Either way, the buyer receives a real
+**Venice.ai API key** that works against the OpenAI-compatible endpoint
+`https://api.venice.ai/api/v1`.
 
 This skill is **one file**. There is nothing to install. Any agent
 that can read SKILL.md and make HTTPS calls (curl / fetch / OpenAI
@@ -24,14 +30,14 @@ SDK / `web_fetch` / built-in HTTP tool) can use it.
 
 ## Why this skill exists
 
-CheapTokens is optimized for short-lived, same-day credits. Manually
-configuring a new API provider every day is friction, especially when
-you buy near midnight UTC for the largest discount and may have less
-than an hour to use the credits. This skill turns a fresh key into
-immediate action: paste the key (or point the agent at a secret/env
-var), ask normally, and the agent discovers Venice capabilities, routes
-the task, spends the key, and attributes what actually ran before the
-credits expire.
+CheapTokens is optimized for cheap burst inference and lightweight API
+key management. Same-Day keys are best when the task needs to run today
+at the largest available discount. Prepaid keys are better when a
+buyer wants one reusable key and a predictable daily reserve. This skill
+turns either key into immediate action: paste the key (or point the
+agent at a secret/env var), ask normally, and the agent discovers
+Venice capabilities, routes the task, spends the key, and attributes
+what actually ran.
 
 ---
 
@@ -70,14 +76,16 @@ Where `<LAST6>` is the last 6 characters of the pasted key.
 
 | Response | Meaning | Action |
 |---|---|---|
-| `200` with JSON | CheapTokens credit. Cache `{ status, creditsIssuedUsd, expiresAt, veniceKeyLast6, veniceUsage }` for the session. | Continue. Use CheapTokens-aware copy + attribution. |
+| `200` with JSON | CheapTokens credit. Cache `{ status, creditsIssuedUsd, expiresAt, veniceKeyLast6, veniceUsage, isStableKey, keyBalanceUsd, dailyReservedCapacityUsd, prepaid }` for the session. | Continue. Use CheapTokens-aware copy + attribution. |
 | `404` | Plain Venice key (or a typo). | Continue. Use the key normally; just don't show CheapTokens-specific balance copy. |
 | `429` | Rate-limited. | Wait ~2s and retry once. If still rate-limited, skip detection and proceed. |
 | Anything else | Treat as unknown. Skip detection and proceed. |
 
-If `status !== "active"` or `expiresAt` is in the past, the key is
-dead. Tell the user once and stop. **Do not try to burn a dead
-key.**
+If `status !== "active"` or a Same-Day key's `expiresAt` is in the
+past, the key is dead. Tell the user once and stop. **Do not try to
+burn a dead key.** For Prepaid API Keys, use `keyBalanceUsd`,
+`dailyReservedCapacityUsd`, and `prepaid.balanceRunwayDays` to decide
+whether the account has enough prepaid balance for the current reserve.
 
 Immediately after an active CheapTokens status check, compute:
 
@@ -93,14 +101,15 @@ Then choose the flow before asking the user anything:
 | `30m-119m` | **Normal-short** | Ask at most one model-choice question if needed. Skip priority mode/config writes. |
 | `>= 120m` | **Full flow** | Normal discovery and optional priority-mode discussion are allowed. |
 
-Every acknowledgement while a CheapTokens key is active must show a
-countdown, not only an absolute timestamp:
+Every acknowledgement while a Same-Day CheapTokens key is active must
+show a countdown, not only an absolute timestamp:
 
 > CheapTokens active: $1.75 issued, **9m left** until 23:59 UTC. Fast mode - using `claude-sonnet-4-6` if live, then starting now.
 
-Priority mode or provider config mutation is only offered when
-`minutesRemaining >= 120`. Below that, it is a time sink and should be
-skipped.
+Priority mode or provider config mutation is only offered for Same-Day
+keys when `minutesRemaining >= 120`. Below that, it is a time sink and
+should be skipped. For Prepaid API Keys, show prepaid balance and daily
+reserve instead of urgency countdown.
 
 Example success body:
 
@@ -111,7 +120,11 @@ Example success body:
   "creditsIssuedUsd": 1.75,
   "expiresAt": "2026-04-23T23:59:59.999Z",
   "veniceKeyLast6": "abc123",
-  "veniceUsage": { "lastUsedAt": "...", "trailingSevenDays": 0.5 }
+  "isStableKey": false,
+  "keyBalanceUsd": null,
+  "dailyReservedCapacityUsd": null,
+  "prepaid": null,
+  "veniceUsage": { "remaining": { "diem": 1.2 }, "used": { "diem": 0.5 } }
 }
 ```
 
@@ -122,9 +135,9 @@ Example success body:
 The fastest workflow is pasting a CheapTokens key into a trusted local
 agent. That is acceptable when speed matters, but treat the key as a
 bearer credential: anyone who sees it can spend the remaining credits
-until it expires. CheapTokens limits blast radius because keys are
-budget-capped and expire at 23:59:59 UTC on the purchase date, but it
-does not make pasted keys private.
+until it runs out. CheapTokens limits blast radius because Same-Day
+keys are budget-capped and expire at 23:59:59 UTC on the purchase date,
+but pasted keys are still not private.
 
 Recommended paths:
 
@@ -143,8 +156,9 @@ export VENICE_API_KEY="VENICE_INFERENCE_KEY_..."
 ```
 
 Do not paste keys into public/shared agents, commit keys to repos, or
-include them in screenshots/logs. If a key is exposed, use wallet
-recovery/reissue to rotate it.
+include them in screenshots/logs. If a key is exposed, use CheapTokens
+Account recovery: card buyers request a private email link, while
+wallet buyers sign to reveal or reissue eligible wallet-owned keys.
 
 ---
 
@@ -671,7 +685,7 @@ const payFetch = wrapFetchWithPayment(fetch, wallet, BigInt(1_000_000)); // max 
 const res = await payFetch('https://cheaptokens.ai/api/buy', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ usdPaid: 1.00 }),
+  body: JSON.stringify({ usdPaid: 1.00, purchaseMode: 'spot' }),
 });
 const { veniceApiKey, purchase } = await res.json();
 // purchase.creditsIssuedUsd, purchase.expiresAt, etc.
@@ -679,24 +693,29 @@ const { veniceApiKey, purchase } = await res.json();
 
 Decision loop:
 
-1. `GET https://cheaptokens.ai/api/pricing` → check `discountPercent`, `supply.remaining`
-2. `GET https://cheaptokens.ai/api/supply` → confirm not sold out
-3. `POST https://cheaptokens.ai/api/buy { usdPaid }` via `payFetch`
-4. Use `veniceApiKey` against `https://api.venice.ai/api/v1`
-5. `GET https://cheaptokens.ai/api/status/<last6>` to monitor balance
-6. Before `expiresAt`, buy again if the task isn't done
+1. `GET https://cheaptokens.ai/api/checkout/options` → discover payment routes and whether Prepaid API Key is enabled
+2. `GET https://cheaptokens.ai/api/pricing` → check `discountPercent`, `supply.remaining`
+3. `GET https://cheaptokens.ai/api/supply` → confirm not sold out
+4. `POST https://cheaptokens.ai/api/buy { usdPaid, purchaseMode: "spot" }` via `payFetch`
+   - Prepaid: `{ usdPaid, purchaseMode: "prepaid", dailyReservedUsd, reserveStart }`
+5. Use `veniceApiKey` against `https://api.venice.ai/api/v1`
+6. `GET https://cheaptokens.ai/api/status/<last6>` to monitor balance
+7. For Same-Day, buy again before `expiresAt` if the task is not done.
+   For Prepaid, monitor `keyBalanceUsd` and top up before the next daily
+   reserve cannot be funded.
 
 Discount curve (approximate):
 
 | UTC hour | Typical discount |
 |---|---|
-| 00:00 | ~25% |
-| 12:00 | ~30–35% |
-| 18:00 | ~45–50% |
-| 21:00 | ~60–65% |
-| 22:30 | ~70–75% |
+| 00:00 | ~30% |
+| 12:00 | ~40–45% |
+| 18:00 | ~60–65% |
+| 21:00 | ~75–80% |
+| 22:30 | ~85–90% |
 
-Reservations (future dates): flat 25% with no time curve.
+Prepaid API Key purchases use a flat prepaid discount and create one
+reusable key with prepaid balance plus a daily credit reserve.
 
 CheapTokens-specific error codes on `/api/buy`:
 
@@ -705,7 +724,7 @@ CheapTokens-specific error codes on `/api/buy`:
 | `AMOUNT_BELOW_MINIMUM` | 400 | Increase `usdPaid` (min $0.50 in credits). |
 | `INVALID_PRECISION` | 400 | Round `usdPaid` to 2 decimals. |
 | `PAYMENT_INVALID` | 402 | Check USDC balance, retry. |
-| `SOLD_OUT_TODAY` | 409 | Wait for 00:00 UTC or reserve a future date. |
+| `SOLD_OUT_TODAY` | 409 | Wait for 00:00 UTC, reduce amount, or use Prepaid if capacity is available. |
 | `AMOUNT_EXCEEDS_REMAINING` | 409 | Reduce or check `/api/supply`. |
 | `PAYMENT_REPLAY` | 409 | Start a new purchase. |
 | `PAYMENT_SESSION_EXPIRED` | 410 | Start a new purchase. |
@@ -716,9 +735,27 @@ CheapTokens-specific error codes on `/api/buy`:
 
 ---
 
-## Account recovery (no accounts — wallet is identity)
+## Account recovery and management
 
-Wallet-signed EIP-191 messages. Format:
+CheapTokens Account has three modes:
+
+- **Email:** card buyers enter the Stripe receipt or Stripe Link checkout
+  email at `https://cheaptokens.ai/status?tab=email`. CheapTokens sends a
+  private one-time account link and does not reveal whether an email has
+  purchases from the public form.
+- **API key:** paste a key or last-6 suffix to view limited status,
+  usage, expiry, prepaid balance, and daily reserve.
+- **Wallet:** wallet buyers sign an EIP-191 message to manage
+  wallet-owned purchases.
+
+Card recovery endpoints:
+
+- `POST /api/stripe/recover` → request a private one-time Account link
+  with `{ email }`.
+- `POST /api/stripe/recover/claim` → claim the one-time link with
+  `{ token }`; returns card-purchased keys and account summary rows.
+
+Wallet-signed EIP-191 message format:
 
 ```
 CheapTokens.ai
@@ -729,9 +766,10 @@ Issued: <ISO-8601 timestamp>
 
 - `POST /api/wallet/purchases` → list purchases for this wallet
 - `POST /api/wallet/reveal`    → reveal full key for a given purchase
-- `POST /api/wallet/reissue`   → revoke + reissue key (same balance)
+- `POST /api/wallet/reissue`   → revoke + reissue key (remaining balance)
+- `POST /api/buy` with `topUpKeyLast6` → top up supported Prepaid API Keys after x402 payment
 
-All three: `{ walletAddress, signature, nonce, issuedAt, purchaseId? }`.
+Wallet endpoints: `{ walletAddress, signature, nonce, issuedAt, purchaseId? }`.
 
 ---
 
@@ -755,9 +793,15 @@ CheapTokens endpoints:
 - `GET  https://cheaptokens.ai/api/status/<last6>`
 - `GET  https://cheaptokens.ai/api/pricing`
 - `GET  https://cheaptokens.ai/api/supply`
+- `GET  https://cheaptokens.ai/api/checkout/options`
 - `GET  https://cheaptokens.ai/api/payments/health`
 - `POST https://cheaptokens.ai/api/buy`
+- `POST https://cheaptokens.ai/api/stripe/recover`
+- `POST https://cheaptokens.ai/api/stripe/recover/claim`
 - `POST https://cheaptokens.ai/api/wallet/{purchases,reveal,reissue}`
+- `POST https://cheaptokens.ai/api/buy` with `topUpKeyLast6` for x402 Prepaid top-ups
+- `GET|POST https://cheaptokens.ai/api/playground/models`
+- `POST https://cheaptokens.ai/api/playground/{chat,image,speech}`
 
 Venice endpoints (auth: `Authorization: Bearer <KEY>`):
 
