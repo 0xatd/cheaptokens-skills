@@ -13,7 +13,8 @@ license: MIT
 CheapTokens.ai sells discounted Venice.ai API credits:
 
 - **Same-Day Credits:** time-decay discounted credits for work today.
-  They expire at 23:59:59 UTC on the purchase date.
+  They expire at 23:59:59 UTC on the purchase date. Capacity affects
+  availability and maximum purchase size, not the time-based price.
 - **Prepaid API Key:** one reusable Venice key with prepaid balance and a
   selected daily credit reserve. The reserve is debited from prepaid
   balance each UTC day.
@@ -694,7 +695,7 @@ const { veniceApiKey, purchase } = await res.json();
 Decision loop:
 
 1. `GET https://cheaptokens.ai/api/checkout/options` → discover payment routes and whether Prepaid API Key is enabled
-2. `GET https://cheaptokens.ai/api/pricing` → check `discountPercent`, `supply.remaining`
+2. `GET https://cheaptokens.ai/api/pricing` → check time-based `discountPercent`, `supply.remaining`
 3. `GET https://cheaptokens.ai/api/supply` → confirm not sold out
 4. `POST https://cheaptokens.ai/api/buy { usdPaid, purchaseMode: "spot" }` via `payFetch`
    - Prepaid: `{ usdPaid, purchaseMode: "prepaid", dailyReservedUsd, reserveStart }`
