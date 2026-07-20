@@ -698,7 +698,9 @@ Decision loop:
 2. `GET https://cheaptokens.ai/api/pricing` → check time-based `discountPercent`, `supply.remaining`
 3. `GET https://cheaptokens.ai/api/supply` → confirm not sold out
 4. `POST https://cheaptokens.ai/api/buy { usdPaid, purchaseMode: "spot" }` via `payFetch`
-   - Prepaid: `{ usdPaid, purchaseMode: "prepaid", dailyReservedUsd, reserveStart }`
+   - Prepaid: `{ usdPaid, purchaseMode: "prepaid", dailyReservedUsd }`
+   - New Prepaid API Keys start tomorrow UTC. If you send `reserveStart`, it must be `"tomorrow"`.
+   - The daily reserve must fit the unreserved capacity available for that start date.
 5. Use `veniceApiKey` against `https://api.venice.ai/api/v1`
 6. `GET https://cheaptokens.ai/api/status/<last6>` to monitor balance
 7. For Same-Day, buy again before `expiresAt` if the task is not done.
@@ -716,7 +718,8 @@ Discount curve (approximate):
 | 22:30 | ~85–90% |
 
 Prepaid API Key purchases use a flat prepaid discount and create one
-reusable key with prepaid balance plus a daily credit reserve.
+reusable key with prepaid balance plus a daily credit reserve. New
+Prepaid API Keys start tomorrow UTC.
 
 CheapTokens-specific error codes on `/api/buy`:
 
